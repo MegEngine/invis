@@ -1,0 +1,5 @@
+loguru
+megengine
+# TODO: Update with exact module version
+torch
+torchvision
