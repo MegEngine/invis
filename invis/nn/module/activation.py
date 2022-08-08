@@ -14,8 +14,6 @@ from .module import Module
 # Threshold(Module)
 # MultiheadAttention(Module)
 
-# TODO: remove F.ensure_tensor_type
-
 
 class ReLU(Module):
     r"""Applies the rectified linear unit function element-wise:
@@ -98,7 +96,6 @@ class RReLU(Module):
         self.upper = upper
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.rrelu(input, self.lower, self.upper, self.training, self.inplace)
 
@@ -156,7 +153,6 @@ class Hardtanh(Module):
         self.inplace = inplace
         assert self.max_val > self.min_val
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.hardtanh(input, self.min_val, self.max_val, self.inplace)
 
@@ -202,7 +198,6 @@ class Sigmoid(Module):
         - Output: :math:`(N, *)`, same shape as the input
     """
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.sigmoid(input)
 
@@ -235,7 +230,6 @@ class Hardsigmoid(Module):
         super(Hardsigmoid, self).__init__()
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.hardsigmoid(input, self.inplace)
 
@@ -278,7 +272,6 @@ class SiLU(Module):
         super(SiLU, self).__init__()
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.silu(input)
 
@@ -318,7 +311,6 @@ class Hardswish(Module):
         super(Hardswish, self).__init__()
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.hardswish(input, self.inplace)
 
@@ -353,7 +345,6 @@ class ELU(Module):
         self.alpha = alpha
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.elu(input, self.alpha, self.inplace)
 
@@ -392,7 +383,6 @@ class CELU(Module):
         self.alpha = alpha
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.celu(input, self.alpha, self.inplace)
 
@@ -423,7 +413,6 @@ class SELU(Module):
         super(SELU, self).__init__()
         self.inplace = inplace
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.selu(input, self.inplace)
 
@@ -455,7 +444,6 @@ class GLU(Module):
         super(GLU, self).__init__()
         self.dim = dim
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.glu(input, self.dim)
 
@@ -506,7 +494,6 @@ class Hardshrink(Module):
         super(Hardshrink, self).__init__()
         self.lambd = lambd
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.hardshrink(input, self.lambd)
 
@@ -544,7 +531,6 @@ class LeakyReLU(Module):
         self.negative_slope = negative_slope
         self.inplace = inplace  # inplace not implemented
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.leaky_relu(input, self.negative_slope)
 
@@ -593,7 +579,6 @@ class Softplus(Module):
         self.beta = beta
         self.threshold = threshold
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.softplus(input, self.beta, self.threshold)
 
@@ -634,7 +619,6 @@ class Softshrink(Module):
         super(Softshrink, self).__init__()
         self.lambd = lambd
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.softshrink(input, self.lambd)
 
@@ -682,7 +666,6 @@ class PReLU(Module):
         # TODO: check later
         self.weight = Parameter(torch.empty(num_parameters).fill_(init))
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.prelu(input, self.weight)
 
@@ -726,7 +709,6 @@ class Tanhshrink(Module):
         >>> output = m(input)
     """
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.tanhshrink(input)
 
@@ -766,7 +748,6 @@ class Softmin(Module):
         if not hasattr(self, 'dim'):
             self.dim = None
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.softmin(input, self.dim, _stacklevel=5)
 
@@ -810,7 +791,6 @@ class Softmax(Module):
         if not hasattr(self, 'dim'):
             self.dim = None
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.softmax(input, self.dim)
 
@@ -831,7 +811,6 @@ class Softmax2d(Module):
         values in the range [0, 1]
     """
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         assert input.dim() == 4, 'Softmax2d requires a 4D tensor as input'
         return F.softmax(input, 1)
@@ -864,7 +843,6 @@ class LogSoftmax(Module):
         if not hasattr(self, 'dim'):
             self.dim = None
 
-    @F.ensure_tensor_type
     def forward(self, input: Tensor) -> Tensor:
         return F.logsoftmax(input, self.dim)
 

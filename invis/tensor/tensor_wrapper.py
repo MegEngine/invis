@@ -6,8 +6,10 @@ import numpy as np
 
 import megengine as mge
 
-import invis.nn.functional as F
-from invis.nn.functional.helper import ensure_tensor_type, inplace, swap_argument
+import invis
+
+from . import function as F
+from .function.helper import ensure_tensor_type, inplace, swap_argument
 
 __all__ = [
     "Tensor",
@@ -16,6 +18,18 @@ __all__ = [
 
 
 class Tensor(mge.Tensor):
+
+    def __new__(cls, *args, **kwargs):
+        # TODO: add modify wrapper
+        if "device" in kwargs:
+            device = kwargs["device"]
+            kwargs["device"] = invis.device(device)
+        elif len(args) > 2:
+            args = list(args)
+            args[2] = invis.device(args[2])
+            args = tuple(args)
+
+        return mge.Tensor.__new__(cls, *args, **kwargs)
 
     def dim(self):
         return self.ndim
@@ -105,9 +119,12 @@ class Tensor(mge.Tensor):
     @ensure_tensor_type
     def to(self, *args, **kwargs):
         first_arg = args[0]
-        if "cuda" in first_arg:
-            return self
-        return mge.Tensor.to(self, *args, **kwargs)
+        if "cuda" in first_arg or "cpu" in first_arg:
+            list_args = list(args)
+            list_args[0] = invis.device(first_arg)
+            return mge.Tensor.to(self, *tuple(list_args), **kwargs)
+        else:  # dtype
+            return self.astype(*args, **kwargs)
 
     def argmax(self, dim=None, keepdim=False):
         return F.argmax(self, dim, keepdim)
@@ -128,6 +145,7 @@ class Tensor(mge.Tensor):
     def chunk(self, chunks, dim=0):
         return F.chunk(self, chunks, dim)
 
+    @ensure_tensor_type
     def transpose(self, dim0, dim1):
         # swap axis
         # TODO: this should be solved by mge
@@ -195,10 +213,13 @@ class Tensor(mge.Tensor):
     # some other functions
     relu = F.relu
     sigmoid = F.sigmoid
+    t = F.t
+    roll = F.roll
 
     # functions for convience
     flatten = F.flatten
     all = F.all
+    sum = F.sum
     mean = F.mean
     std = F.std
     var = F.var
@@ -208,6 +229,8 @@ class Tensor(mge.Tensor):
 
     clamp = F.clamp
     clamp_ = F.clamp_
+    masked_fill = F.masked_fill
+    masked_fill_ = F.masked_fill_
 
     __getitem__ = ensure_tensor_type(mge.Tensor.__getitem__)
     # innernal function

@@ -20,9 +20,9 @@ __all__ = [
     "rand", "randn",
     "mean", "std", "var", "norm", "sum", "prod", "cumsum", "cumprod",
     "cat", "stack", "equal", "topk", "sort", "argsort",
-    "transpose", "permute", "reshape", "squeeze", "unsqueeze", "flatten",
+    "transpose", "permute", "t", "reshape", "squeeze", "unsqueeze", "flatten",
     "interpolate", "pad", "chunk", "split",
-    "avg_pool2d", "max_pool2d",
+    "avg_pool2d", "max_pool2d", "adaptive_max_pool1d", "adaptive_avg_pool1d",
     "round", "clamp", "clamp_",
     "log_softmax", "relu", "leaky_relu", "sigmoid",
     "pixel_shuffle", "pixel_unshuffle",
@@ -31,7 +31,9 @@ __all__ = [
     "maximum", "minimum",
     "isnan", "isinf", "isfinite",
     "gather", "scatter",
+    "masked_fill", "masked_fill_",
     "tile", "repeat_interleave", "broadcast_to",
+    "roll",
 ]
 
 
@@ -86,7 +88,12 @@ def log_softmax(input, dim, *, dtype=None):
 
 @ensure_tensor_type
 def matmul(input, other, *, out=None):
-    return F.matmul(input, other, out=out)
+    # NOTE: matmul doesn't support int32 dtype in mge, waiting for fix
+    if input.dtype == np.int32 and other.dtype == np.int32:
+        # TODO convert to float32 might case precision lost
+        return F.matmul(input.astype("float32"), other.astype("float32")).astype("int32")
+    else:
+        return F.matmul(input, other)
 
 
 @ensure_tensor_type
@@ -235,6 +242,16 @@ def transpose(input, dim0, dim1):
     return input.transpose(dim0, dim1)
 
 
+@ensure_tensor_type
+def t(input):
+    if input.ndim > 2:
+        raise RuntimeError("t() expects a tensor with <= 2 dimensions")
+    if input.ndim == 1:
+        return input
+    else:
+        return transpose(input, 0, 1)
+
+
 @ensure_tensor_list
 def chunk(input, chunks, dim=0):
     """
@@ -288,7 +305,8 @@ def isfinite(input):
 
 @ensure_tensor_type
 def sum(input, dim=None, keepdim=False, *, dtype=None):
-    return F.sum(input, axis=dim, keepdims=keepdim)
+    # sum here shares the problem like transpose
+    return mge.Tensor.sum(input, axis=dim, keepdims=keepdim)
 
 
 @ensure_tensor_type
@@ -351,6 +369,19 @@ def scatter(input, dim, index, src):
     return F.scatter(input, dim, index=index, source=src)
 
 
+@ensure_tensor_type
+def masked_fill(input, mask, value):
+    x = input.detach()
+    x[..., mask] = value
+    return x
+
+
+@ensure_tensor_type
+def masked_fill_(input, mask, value):
+    input[..., mask] = value
+    return input
+
+
 @ensure_tensor_list
 def meshgrid(*tensors, indexing="xy"):
     """meshgrid wrapper for megengine"""
@@ -386,6 +417,10 @@ def logspace(
 def arange(
     start=0, end=None, step=1, *, out=None, dtype="float32", device=None, requires_grad=False
 ):
+    if end is None:
+        start, end = 0, start
+    if isinstance(end, int):
+        dtype = "int32"
     return F.arange(start, end, step, dtype=dtype)
 
 
@@ -424,6 +459,18 @@ def avg_pool2d(
         raise NotImplementedError("ceil_mode is not supported")
 
     return F.avg_pool2d(input, kernel_size, stride, padding, mode)
+
+
+@ensure_tensor_type
+def adaptive_avg_pool1d(input, output_size):
+    input = F.expand_dims(input, axis=-1)
+    return F.squeeze(F.adaptive_avg_pool2d(input, output_size), axis=-1)
+
+
+@ensure_tensor_type
+def adaptive_max_pool1d(input, output_size):
+    input = F.expand_dims(input, axis=-1)
+    return F.squeeze(F.adaptive_max_pool2d(input, output_size), axis=-1)
 
 
 @ensure_tensor_type
@@ -543,3 +590,25 @@ def broadcast_to(input, shape):
                 tile_dims.append(target)
 
     return tile(input, tuple(tile_dims))
+
+
+@ensure_tensor_type
+def roll(input, shifts, dims=None):
+    prev_shape = input.shape
+    if dims is None:
+        input = input.flatten()
+        dims = 0
+
+    tensor_shape = input.shape
+    if isinstance(shifts, int):
+        shifts = (shifts, )
+        dims = (dims, )
+
+    for s, dim in zip(shifts, dims):
+        dim_value = tensor_shape[dim]
+        idx = [(i - s) % dim_value for i in range(dim_value)]
+        item_idx = [slice(None, None) for _ in range(input.ndim)]
+        item_idx[dim] = idx
+        input = input[tuple(item_idx)]
+
+    return input.reshape(*prev_shape)

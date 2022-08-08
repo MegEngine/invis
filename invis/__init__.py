@@ -2,5 +2,5 @@
 
 __version__ = "0.0.1"
 
-from . import misc
+from . import cuda, misc, nn
 from ._direct_import import *

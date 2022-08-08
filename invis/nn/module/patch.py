@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import functools
 import inspect
 import itertools
 from collections import OrderedDict
@@ -9,8 +10,10 @@ from typing import Any, Callable, Iterable, List, Optional, Set, Tuple, Union
 import megengine as mge
 from megengine.module import Module
 
-from invis.nn.functional.helper import ensure_tensor_type
+from invis.tensor.function.helper import ensure_tensor_type
 from invis.utils.wrapper import is_torch_tensor
+
+from ..parameter import Parameter
 
 __all__ = ["ModuleMixin"]
 
@@ -113,11 +116,13 @@ class ModuleMixin:
 
         if param is None:
             self._parameters[name] = None
-        elif not isinstance(param, mge.Parameter):
+            setattr(self, name, param)
+        elif not isinstance(param, (mge.Parameter, Parameter)):
             raise TypeError(f"cannot assign object to parameter '{name}' "
                             "(invis.nn.Parameter or None required)")
         else:
             self._parameters[name] = param
+            setattr(self, name, param)
 
     def register_buffer(self: Module, name: str, tensor, persistent: bool = True) -> None:
         r"""Adds a buffer to the module.
@@ -156,6 +161,7 @@ class ModuleMixin:
                             "(mge Tensor or None required)")
         else:
             self._buffers[name] = tensor
+            setattr(self, name, tensor)
             # TODO persistent is not used in this.
 
     def _load_from_state_dict(
@@ -243,6 +249,8 @@ class ModuleMixin:
         # NOTE: I don't like design here in megengine, so I override it
         # 1. MGE using expand sturcture
         # 2. sorted(module_dict) in origin code, which means "bn" is solved before "conv"
+        # support List as ModuleList and Dict as ModuleDict is stupaid for me in MegEngine
+        # I fucking hate it...
         if seen is None:
             seen = set([id(self)])
 
@@ -303,12 +311,24 @@ class ModuleMixin:
                     )
 
     def __setattr__(self: Module, name: str, value: Any) -> None:
-        if not isinstance(value, Module) and isinstance(value, (list, tuple, dict)):
-            # support List as ModuleList and Dict as ModuleDict is stupaid for me in MegEngine
-            # I fucking hate it...
-            object.__setattr__(self, name, value)
+        if isinstance(value, (mge.Parameter, Parameter)):  # param should be in state_dict
+            patch_attribute(self)
+            if name not in self._parameters:
+                self._parameters[name] = value
+        Module.__setattr__(self, name, value)
+
+
+def extra_repr_first(f):
+
+    @functools.wraps(f)
+    def inner_f(obj):
+        extra_f = getattr(obj, "extra_repr", None)
+        if extra_f is not None:
+            return extra_f()
         else:
-            Module.__setattr__(self, name, value)
+            return f(obj)
+
+    return inner_f
 
 
 def patch_method(
@@ -316,7 +336,7 @@ def patch_method(
     patch_obj=ModuleMixin,
     skip: Iterable[str] = None,
     patch_override: bool = True,
-    patch_forward: bool = True,
+    patch_call: bool = True,
 ):
     """patch method in `patch_obj` to another class
 
@@ -325,7 +345,7 @@ def patch_method(
         patch_obj: class object to patch. Defaults to ModuleMixin.
         skip (Iterable[str], optional): skip method list. Defaults to None.
         patch_override (bool, optional): patch override method in origin class. Defaults to True.
-        patch_forwad (bool, optional): patch forward to ensure tensor output.
+        patch_call (bool, optional): patch call to ensure tensor output.
 
     Returns:
         new class with method patched.
@@ -341,12 +361,15 @@ def patch_method(
         if name not in skip:
             setattr(classname, name, func)
 
-    if patch_forward:
-        classname.forward = ensure_tensor_type(classname.forward)
+    if patch_call:
+        classname.__call__ = ensure_tensor_type(classname.__call__)
+    classname._module_info_string = extra_repr_first(classname._module_info_string)
 
     return classname
 
 
 def patch_attribute(obj):
-    obj._buffers = OrderedDict()
-    obj._parameters = OrderedDict()
+    if not hasattr(obj, "_buffers"):
+        obj._buffers = OrderedDict()
+    if not hasattr(obj, "_parameters"):
+        obj._parameters = OrderedDict()

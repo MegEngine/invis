@@ -2,9 +2,11 @@
 
 from collections import OrderedDict
 
+import megengine as mge
 import megengine.module as M
-from megengine.module.module import _is_buffer, _is_parameter
+from megengine.module.module import _is_buffer
 
+import invis
 from invis.utils.wrapper import is_torch_tensor
 
 from .patch import patch_attribute, patch_method
@@ -12,14 +14,15 @@ from .patch import patch_attribute, patch_method
 __all__ = ["Conv2d", "ConvTranspose2d"]
 
 
+def _is_parameter(obj):
+    return isinstance(obj, (invis.nn.Parameter, mge.Parameter))
+
+
 class Conv2d(M.Conv2d):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         patch_attribute(self)
-        self._parameters["weight"] = self.weight
-        if self.bias is not None:
-            self._parameters["bias"] = self.bias
 
     def _load_from_state_dict(
         self, state_dict, prefix, local_metadata, strict,
@@ -105,6 +108,9 @@ class ConvTranspose2d(M.ConvTranspose2d):
         # using `M.ConvTranspose2d._state_dict` but not `self._state_dict`
         local_state_dict = M.ConvTranspose2d._state_dict(self, keep_var=True)
         weights_to_load = {k: state_dict[prefix + k] for _, k in local_state_dict}
+        for k, v in weights_to_load.items():
+            if is_torch_tensor(v):
+                weights_to_load[k] = v.detach().cpu().numpy()
 
         for (module_type, k), var in local_state_dict.items():
             if k not in weights_to_load:

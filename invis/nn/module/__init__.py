@@ -35,6 +35,7 @@ from .conv import Conv2d, ConvTranspose2d
 from .dropout import Dropout
 from .linear import Linear
 from .module import Module
+from .normalization import GroupNorm, LayerNorm
 from .pixelshuffle import PixelShuffle, PixelUnshuffle
-from .pooling import MaxPool2d
+from .pooling import AdaptiveAvgPool1d, AdaptiveMaxPool1d, MaxPool2d
 from .upsampling import Upsample, UpsamplingBilinear2d, UpsamplingNearest2d

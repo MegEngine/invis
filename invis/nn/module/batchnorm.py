@@ -14,7 +14,12 @@ class BatchNorm2d(MGE_BatchNorm2d):
     def __init__(self, *args, **kwargs):
         if "momentum" in kwargs:  # momentum in BatchNorm of mge is not momentum in pytorch
             kwargs["momentum"] = 1 - kwargs["momentum"]
+        elif len(args) > 2:
+            args = list(args)
+            args[2] = 1 - args[2]
+            args = tuple(args)
         super().__init__(*args, **kwargs)
+
         patch_attribute(self)
         if self.affine:
             self._parameters["weight"] = self.weight

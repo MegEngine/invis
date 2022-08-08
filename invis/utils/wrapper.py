@@ -5,6 +5,7 @@ import pickle
 import megengine as mge
 import torch
 from megengine import save
+from megengine.device import CompNode
 
 __all__ = [
     "manual_seed",
@@ -18,10 +19,23 @@ def manual_seed(seed):
     mge.random.seed(seed)
 
 
-class device(str):
+def device(name, index=None) -> str:
+    if isinstance(name, CompNode):  # skip if is CompNode
+        return name
 
-    def __repr__(self):
-        return f"Device('{self}')"
+    if name is None or "xpu" in name:
+        return name
+
+    if index is None:
+        index = "0"
+
+    if ":" in name:
+        name, index = name.split(":")
+
+    if name == "cuda":
+        name = "gpu"
+
+    return name + index
 
 
 def load(f, map_location=None, pickle_module=pickle, **pickle_load_args):

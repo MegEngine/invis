@@ -67,7 +67,7 @@ class Upsample(Module):
     def forward(self, input):
         return F.interpolate(input, self.size, self.scale_factor, self.mode, self.align_corners)
 
-    def _module_info_str(self) -> str:
+    def _module_info_string(self) -> str:
         if self.scale_factor is not None:
             info = 'scale_factor=' + str(self.scale_factor)
         else:

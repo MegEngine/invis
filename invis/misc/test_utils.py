@@ -39,14 +39,15 @@ class TestModule:
                     )
                 )
 
-        def test_load(self):
+        def test_load_torch_weights(self):
             self.module.load_state_dict(self.weights)
             self.torch_module.load_state_dict(
                 {k: torch.Tensor(v) for k, v in self.weights.items()}
             )
             self.check_states()
+            self.module.load_state_dict(self.torch_module.state_dict())
 
-        def test_dump_load(self):
+        def test_dump_load_for_torch_module(self):
             self.module.load_state_dict(self.weights)
             weights = self.module.state_dict()
 
@@ -67,12 +68,19 @@ class TestModule:
             self.assertEqual(prev_keys, set(self.module.state_dict().keys()))
 
         def test_register_buffer(self):
-            self.module.register_buffer("x", mge.Tensor(1))
-            self.assertTrue("x" in self.module.state_dict().keys())
+            self.module.register_buffer("x", invis.Tensor(1))
+            self.assertTrue("x" in self.module.state_dict())
+            self.assertTrue("x" in self.module.__dict__)
 
         def test_register_param(self):
-            self.module.register_buffer("x", mge.Parameter(1))
+            self.module.register_buffer("x", invis.nn.Parameter(1))
             self.assertTrue("x" in self.module.state_dict().keys())
+            self.assertTrue("x" in self.module.__dict__)
+
+        def test_parameter_attr(self):
+            self.module.x = invis.nn.Parameter(invis.ones(2))
+            self.assertTrue("x" in self.module.state_dict().keys())
+            self.module.load_state_dict(self.module.state_dict())
 
         def test_forward(self):
             module_input = getattr(self, "module_input", None)
