@@ -39,7 +39,7 @@ pip3 install -v -e .
 
 * invis.nn.Moudle不会把builtin 的 dict 和 list 看做ModuleDict和 ModuleList了，你可以放心的往Module里塞入Tenor和Module而不用担心state_dict里面多出来一些奇怪的东西了
 * 每个Module终于可以自定义load_state_dict的逻辑了
-* 诸如 x.abs().sigmoid() 终于可以用了，抛弃掉愚蠢的F.sigmoid(F.abs(x))调用吧
+* 诸如 x.abs().sigmoid() 终于可以用了，抛弃掉诸如F.sigmoid(F.abs(x))的调用吧
 * 增加了一些方法，诸如meshgrid、where、pixel_shuffle等
 * 修复mge里面一些支持不全的功能，比如pad(x, (-2, -2, -2, -2))这种
 
@@ -48,10 +48,8 @@ pip3 install -v -e .
 作为对invis的磨练，我转换了一些基本的模型。
 
 * 大部分模型来自于直接对torchvision的转换，使用的版本为0.12.0
-* 检测写YOLOX是因为之前release megengine version YOLOX的时候花了一天对奇怪的算子行为，想报个仇（topk默认算最小这个事至今印象深刻）
-* realcu-gan是之前xxr同学跑来说Bilibili AI的同学从torch转mge觉得很难用，我想show一下这个东西也可以低成本对推理。
-
-以上表述仅仅是吐槽，切勿过分当真。接着看模型：
+* 检测部分写了YOLOX是因为相对来说YOLOX的写法还是有一部分的复杂性的(而且自己也很熟)
+* realcu-gan纯粹是个人兴趣所在(谁不想看到高清的老番呢)
 
 ##### 分类模型
 
@@ -62,6 +60,7 @@ pip3 install -v -e .
 * [resnet](./examples/resnet)
 * [shufflenet](./examples/shufflenet)
 * [squeezenet](./examples/squeezenet)
+* [SwinTransformer](./examples/swin_transformer)
 
 ##### 检测模型
 
